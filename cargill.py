@@ -108,15 +108,25 @@ if uploaded_file:
 
     # Filter data from March 2023 to October 2023 for table view
     table_filtered_df = filtered_df[(filtered_df['DATE'] >= '2023-03-01') & (filtered_df['DATE'] <= '2023-10-31')]
-    
-    # Calculate monthly summary
-    summary_df = table_filtered_df.groupby('WBS').agg(
-        Previous_Month=('Cumulative Amount', lambda x: x.shift(1).sum()),
-        This_Month=('Cumulative Amount', 'sum'),
-        Next_Month=('Cumulative Amount', lambda x: x.shift(-1).sum())
-    ).reset_index()
 
-    # Calculate total row
+    # Define function to calculate monthly amounts based on actual values
+    def calculate_period_summary(df, period_start, period_end):
+        return df[(df['DATE'] >= period_start) & (df['DATE'] <= period_end)].groupby('WBS')['AMOUNT'].sum()
+
+    # Calculate Previous Month (before start_date), This Month (within start_date to end_date), Next Month (after end_date)
+    previous_month = calculate_period_summary(df, df['DATE'].min(), pd.to_datetime(start_date) - pd.DateOffset(days=1))  # Before start date
+    this_month = calculate_period_summary(df, pd.to_datetime(start_date), pd.to_datetime(end_date))  # Between start_date and end_date
+    next_month = calculate_period_summary(df, pd.to_datetime(end_date) + pd.DateOffset(days=1), df['DATE'].max())  # After end date
+
+    # Create summary DataFrame
+    summary_df = pd.DataFrame({
+        'WBS': this_month.index,  # WBS codes
+        'Previous_Month': previous_month.reindex(this_month.index, fill_value=0).values,
+        'This_Month': this_month.values,
+        'Next_Month': next_month.reindex(this_month.index, fill_value=0).values
+    })
+
+    # Calculate total row for each period
     total_row = summary_df[['Previous_Month', 'This_Month', 'Next_Month']].sum()
     total_row_df = pd.DataFrame([['Total', total_row['Previous_Month'], total_row['This_Month'], total_row['Next_Month']]], 
                                 columns=['WBS', 'Previous_Month', 'This_Month', 'Next_Month'])
