@@ -129,7 +129,7 @@ if uploaded_file:
     # Calculate total row for each period
     total_row = summary_df[['Previous_Month', 'This_Month', 'Next_Month']].sum()
     total_row_df = pd.DataFrame([['Total', total_row['Previous_Month'], total_row['This_Month'], total_row['Next_Month']]], 
-                                columns=['WBS', 'Previous_Month', 'This_Month', 'Next_Month'])
+                                columns=['WBS','COST CODE', 'Previous_Month', 'This_Month', 'Next_Month'])
     
     # Append total row
     summary_df = pd.concat([summary_df, total_row_df], ignore_index=True)
