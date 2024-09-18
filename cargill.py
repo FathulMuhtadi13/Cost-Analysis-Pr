@@ -111,16 +111,17 @@ if uploaded_file:
 
     # Define function to calculate monthly amounts based on actual values
     def calculate_period_summary(df, period_start, period_end):
-        return df[(df['DATE'] >= period_start) & (df['DATE'] <= period_end)].groupby('WBS')['AMOUNT'].sum()
+        return df[(df['DATE'] >= period_start) & (df['DATE'] <= period_end)].groupby(['WBS', 'COST CODE'])['AMOUNT'].sum()
 
     # Calculate Previous Month (before start_date), This Month (within start_date to end_date), Next Month (after end_date)
     previous_month = calculate_period_summary(df, df['DATE'].min(), pd.to_datetime(start_date) - pd.DateOffset(days=1))  # Before start date
     this_month = calculate_period_summary(df, pd.to_datetime(start_date), pd.to_datetime(end_date))  # Between start_date and end_date
     next_month = calculate_period_summary(df, pd.to_datetime(end_date) + pd.DateOffset(days=1), df['DATE'].max())  # After end date
 
-    # Create summary DataFrame
+    # Create summary DataFrame with both 'WBS' and 'COST CODE'
     summary_df = pd.DataFrame({
-        'WBS': this_month.index,  # WBS codes
+        'WBS': this_month.index.get_level_values(0),  # WBS codes
+        'COST CODE': this_month.index.get_level_values(1),  # Cost Codes
         'Previous_Month': previous_month.reindex(this_month.index, fill_value=0).values,
         'This_Month': this_month.values,
         'Next_Month': next_month.reindex(this_month.index, fill_value=0).values
@@ -128,8 +129,8 @@ if uploaded_file:
 
     # Calculate total row for each period
     total_row = summary_df[['Previous_Month', 'This_Month', 'Next_Month']].sum()
-    total_row_df = pd.DataFrame([['Total', total_row['Previous_Month'], total_row['This_Month'], total_row['Next_Month']]], 
-                                columns=['WBS', 'Previous_Month', 'This_Month', 'Next_Month'])
+    total_row_df = pd.DataFrame([['Total', '', total_row['Previous_Month'], total_row['This_Month'], total_row['Next_Month']]], 
+                                columns=['WBS', 'COST CODE', 'Previous_Month', 'This_Month', 'Next_Month'])
     
     # Append total row
     summary_df = pd.concat([summary_df, total_row_df], ignore_index=True)
